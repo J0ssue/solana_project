@@ -4,7 +4,19 @@ const endpoint =
   "https://icy-delicate-moon.solana-mainnet.discover.quiknode.pro/2660f7ca4d1d7d1b40a6f46be70a2779a565fad0/";
 const solanaConnection = new solanaWeb3.Connection(endpoint);
 
+export interface Transaction {
+  time: string;
+  signature: string;
+  transactionNumber: number;
+  status: string;
+  fee: number;
+  // logs: string[];
+  instructions?: any[];
+}
+
 export const getTransactions = async (address: string, numTx: number) => {
+  let parsedTransaction: Transaction[] = [];
+
   const pubKey: solanaWeb3.PublicKey = new solanaWeb3.PublicKey(address);
 
   let transactionList = await solanaConnection.getSignaturesForAddress(pubKey, {
@@ -18,31 +30,30 @@ export const getTransactions = async (address: string, numTx: number) => {
   let transactionDetails = await solanaConnection.getParsedTransactions(
     signatureList
   );
-  console.log(transactionDetails);
 
-  // here we can parse the transaction list
-
-  transactionList.forEach((transaction: any, i) => {
-    const date = new Date(transaction.blockTime! * 1000);
+  parsedTransaction = transactionList.map((transaction: any, i) => {
+    const date = new Date(transaction.blockTime! * 1000).toLocaleDateString(
+      "en-US"
+    );
     const transactionNumber = i + 1;
     const transactionSignature = transaction.signature;
     const transactionTime = date;
     const confirmationStatus = transaction.confirmationStatus
       ? transaction.confirmationStatus
       : "";
+    const transactionFee = transactionDetails[i]?.meta?.fee || 0;
+    // const logMessages = transactionDetails[i]?.meta?.logMessages || [];
 
-    // console.log("parsed Transaction: ", {
-    //   Time: transactionTime,
-    //   Signature: transactionSignature,
-    //   TNumber: transactionNumber,
-    //   Status: confirmationStatus,
-    // });
-
-    const transactionInstructions =
-      transactionDetails[i]?.transaction.message.instructions;
-    // here we can parse the instructions inside the transactions list
-    transactionInstructions?.forEach((instruction: any, n) => {
-      console.log(`instructions for transaction ${n + 1}: `, instruction.data);
-    });
+    return {
+      time: transactionTime,
+      signature: transactionSignature,
+      transactionNumber: transactionNumber,
+      status: confirmationStatus,
+      fee: transactionFee,
+      // logs: logMessages,
+      key: i.toString(),
+    };
   });
+
+  return parsedTransaction;
 };
